@@ -55,7 +55,7 @@ A arquitetura do projeto é dividida entre Cliente e Servidor para garantir esca
 
 ```bash
 # Clone este repositório
-git clone [https://github.com/SeuUsuario/supermercado-coelho-escalas.git](https://github.com/SeuUsuario/supermercado-coelho-escalas.git)
+git clone [https://github.com/Coelhom12/MercadoCoelho](https://github.com/Coelhom12/MercadoCoelho)
 
 # Acesse a pasta do projeto
 cd supermercado-coelho-escalas
