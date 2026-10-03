@@ -1,64 +1,105 @@
-# 🛒 Supermercado Coelho - Gestão e Otimização Financeira de Escalas
+# Escalas · Supermercado Coelho
 
-> **Projeto acadêmico (PAC VII - 2026/1) focado na geração, validação paramétrica e otimização de custos de escalas de trabalho para o setor varejista.**
+Sistema web de **geração, validação e otimização financeira de escalas de trabalho** para o Supermercado Coelho
+(PAC VII / PAC VIII — Engenharia de Software, Católica SC). Linha de projeto: **Web Apps**.
 
-![Status](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow?style=for-the-badge)
-![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-F2F4F9?style=for-the-badge&logo=spring-boot)
-![Academic](https://img.shields.io/badge/Projeto-Universitário-blue?style=for-the-badge)
+[![CI/CD](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
----
+| Documento | Conteúdo |
+|-----------|----------|
+| [docs/requisitos.md](docs/requisitos.md) | Fluxos de negócio, requisitos funcionais e não funcionais, user stories |
+| [docs/arquitetura.md](docs/arquitetura.md) | Diagramas C4 (contexto, contêineres e componentes) e decisões |
+| [docs/deploy.md](docs/deploy.md) | Variáveis de ambiente, Docker Compose, pipeline CI/CD, SonarCloud e monitoramento |
 
-## 📖 Sobre o Projeto
+## Stack (definição explícita)
 
-A elaboração de escalas no setor de supermercados é um desafio complexo. Quando feita manualmente, frequentemente resulta em **subdimensionamento** (filas e mau atendimento) ou **superdimensionamento / overstaffing** (excesso de funcionários em dias de baixo movimento, gerando prejuízos silenciosos). 
+| Camada   | Tecnologia |
+|----------|------------|
+| Backend  | Java 21 · Spring Boot 3.5 · Spring Data JPA · Spring Security + JWT · API REST |
+| Banco    | PostgreSQL 17 |
+| Frontend | **React 18 + TypeScript (SPA) com Vite** · React Router |
+| Testes   | JUnit 5 + AssertJ + MockMvc (backend, cobertura ≥ 75%) · Vitest + Testing Library (frontend, ≥ 25%) |
+| Qualidade | GitHub Actions (CI/CD) · JaCoCo · SonarCloud |
+| Operação | Docker · Spring Actuator + Micrometer → Prometheus → Grafana |
 
-Este sistema web foi idealizado para o **Supermercado Coelho** com o objetivo de ir além de um simples "calendário de turnos". Ele cruza restrições trabalhistas da CLT, dados salariais individuais (incluindo adicionais de domingos e feriados) e **projeções de faturamento diário** para garantir que a loja opere com a equipe exata, protegendo a margem de lucro.
+## Os três pilares do artigo
 
----
+1. **Cadastros e regras sindicais** — setores com demanda mínima por perfil de dia, colaboradores (salário, encargos,
+   disponibilidade, ausências), modelos de turno, feriados, projeções de receita e parâmetros CLT.
+2. **Motor de cálculo e otimização financeira** (`backend/.../motor`), Java puro e testado:
+   - `C_escala(d) = Σ [ S_i × H_i,d × F_d ]`, com `S_i = salário / carga mensal × (1 + encargos)`;
+   - `F_d` = 1,0 em dias úteis, fator de domingo/feriado configurável;
+   - teto do dia = `R_proj(d) × % da folha`; `L_max = ⌊teto / custo médio do operador⌋`; `L_min = Σ demandas mínimas`;
+   - aprovação somente se `L_min ≤ ΣO ≤ L_max`, sem estourar o teto e sem violar regras;
+   - modo **BLOQUEAR** (recusa a alocação que gera superdimensionamento) ou **ALERTAR**.
+3. **Matriz dinâmica de geração e validação** — grade colaborador × dia com feedback instantâneo do motor,
+   gerador automático (aloca exatamente `L_min`, ao menor custo, respeitando a CLT) e aprovação.
 
-## ✨ Principais Funcionalidades
+Regras validadas: interjornada de 11h (CLT art. 66), repouso semanal após 6 dias (art. 67), intervalo intrajornada
+(art. 71), jornada diária máxima e horas extras (arts. 58/59), jornada semanal, folga dominical no comércio a cada
+3 semanas (Lei 10.101/2000, art. 6º), sobreposição, indisponibilidade, ausências, subdimensionamento por setor,
+superdimensionamento e custo acima do teto.
 
-*   **⚙️ Módulo Base de Cadastros:** Gerenciamento completo de setores, funcionários, variáveis salariais e regras sindicais/trabalhistas.
-*   **🧠 Motor de Cálculo e Otimização Financeira:** Algoritmo inteligente que bloqueia ou emite alertas caso o custo da escala montada para o dia ultrapasse o teto financeiro viável baseado na projeção de renda.
-*   **📅 Matriz de Escala Dinâmica:** Interface (Frontend) visual e interativa para alocação de funcionários com feedback e validação de regras em tempo real.
-*   **🛡️ Auditoria de Conflitos:** Prevenção automática contra sobreposição de horários e desrespeito a regras de interjornada.
+O **simulador de custos** compara um quadro montado "no olho" com o recomendado pelo motor e mostra a economia.
 
----
+## Como executar
 
-## 🧮 O Diferencial: Inteligência Financeira
+Com Docker: `cp .env.example .env`, ajuste as senhas e rode `docker compose up -d --build` (detalhes em
+[docs/deploy.md](docs/deploy.md)).
 
-O coração do sistema é o seu motor de validação. Ele calcula dinamicamente o custo da escala (`Salário/Hora × Horas Trabalhadas × Peso do Dia`) e garante que o número de operadores alocados seja:
-1. Maior ou igual à necessidade mínima logística de atendimento.
-2. **Menor ou igual** ao limite máximo suportável financeiramente pela loja naquele dia específico.
+Sem Docker, os pré-requisitos são JDK 21, Maven 3.9+, Node 20+ e PostgreSQL com os bancos `escalas_coelho` e
+`escalas_coelho_test` (usuário e senha padrão `postgres`/`postgres`, ou defina `DB_URL`, `DB_USER` e `DB_PASSWORD`).
 
----
+```powershell
+# Backend (http://localhost:8080; métricas e health em http://localhost:8081/actuator)
+cd backend
+mvn spring-boot:run
 
-## 🛠️ Tecnologias Utilizadas (Arquitetura Preliminar)
+# Frontend em desenvolvimento (http://localhost:5173, com proxy para a API)
+cd frontend
+npm install
+npm run dev
+```
 
-A arquitetura do projeto é dividida entre Cliente e Servidor para garantir escalabilidade e manutenção. *(Nota: A stack pode sofrer adaptações ao longo do desenvolvimento prático).*
+Acesso inicial: usuário **gestor**, com a senha definida em `APP_ADMIN_SENHA`. Sem essa variável, uma senha aleatória
+é gerada no primeiro start e exibida uma única vez no log.
 
-**Backend:**
-*   ☕ **Java** - Linguagem principal.
-*   🍃 **Spring Boot** - Criação ágil de APIs RESTful e injeção de dependências.
-*   💾 **Spring Data JPA** - Mapeamento objeto-relacional e persistência de dados.
+Na primeira execução o banco é populado com um **cenário hipotético** (22 colaboradores, 4 setores, projeções e
+feriados nacionais + Joinville) e uma escala da próxima semana gerada pelo motor. Desative com `APP_SEED=false`.
 
-**Frontend / Infraestrutura:**
-*   💻 **SPA (Single Page Application)** - Para renderização fluida da matriz de horários.
-*   🔥 **Firebase** - Previsão de uso para autenticação moderna e hospedagem.
+Build único (piloto em *shadow mode*): `npm run build` no frontend grava a SPA em
+`backend/src/main/resources/static`; depois `mvn package` gera um único `.jar` que serve app + API.
 
----
+Testes:
 
-## 🚀 Como Executar o Projeto (Em breve)
+```powershell
+cd backend;  mvn verify               # unitários + integração (PostgreSQL) + verificação de cobertura ≥ 75%
+cd frontend; npm run test:coverage    # Vitest + verificação de cobertura ≥ 25%
+```
 
-*Instruções detalhadas serão adicionadas conforme a liberação das versões iniciais (Sprints).*
+Os testes do backend seguem os fluxos de negócio: `CadastrosIntegracaoTest`, `EscalaIntegracaoTest` e
+`MotorIntegracaoTest` (API completa contra o PostgreSQL), além dos testes unitários do motor.
 
-```bash
-# Clone este repositório
-git clone [https://github.com/Coelhom12/MercadoCoelho](https://github.com/Coelhom12/MercadoCoelho)
+### Rede corporativa (proxy com inspeção SSL)
 
-# Acesse a pasta do projeto
-cd supermercado-coelho-escalas
+`backend/.mvn/jvm.config` faz o Maven usar o repositório de certificados do Windows (o pipeline de CI o remove, pois
+roda em Linux). Para o npm, defina
+`NODE_OPTIONS=--use-system-ca` antes de `npm install`.
 
-# Comandos de execução do backend (Exemplo)
-./mvnw spring-boot:run
+## Estrutura
+
+```
+backend/src/main/java/br/com/coelho/escalas/
+  dominio/      entidades JPA
+  motor/        MotorFinanceiro, ValidadorEscala, GeradorEscala, SimuladorCusto (sem dependência de banco)
+  servico/      orquestração (EscalaService, ContextoService)
+  api/          controllers REST
+  seguranca/    JWT
+  config/       dados iniciais e encaminhamento da SPA
+frontend/src/
+  pages/        Painel, Escalas, MatrizEscala, Simulador, Funcionarios, Setores, Turnos, Calendario, Parametros
+  components/   Layout e componentes de interface reutilizáveis
+docs/           requisitos, arquitetura (C4) e deploy
+monitoramento/  Prometheus e Grafana
+.github/        pipeline de CI/CD
+```
